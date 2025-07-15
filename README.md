@@ -46,7 +46,7 @@ has the following feature requirements to complete their work:
     - Delete an existing distributor given their ID
 - Challenges
   - Implement a route that streams database updates to a client over an open connection. Use any protocol you want to accomplish this.
-  - Create a React front-end client that can query the API. Only basic functionality is fine, a SPA with buttons and text boxes that execute API calls is fine.
+  - Create a React front-end client that can query the API. Only basic functionality is all we're looking for here, a SPA with buttons and text boxes that execute API calls is fine.
   - Containerize the application(s) and add configuration to run it/them in Docker compose
   - Create an endpoint to export any table from the database in CSV format by passing the table name as a query parameter. 
 
