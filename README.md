@@ -44,17 +44,23 @@ has the following feature requirements to complete their work:
     - Get the cheapest price for restocking an item at a given quantity from all distributors
     - Delete an existing item from your inventory
     - Delete an existing distributor given their ID
-  
+- Challenges
+  - Implement a route that streams database updates to a client over an open connection. Use any protocol you want to accomplish this.
+  - Create a React front-end client that can query the API. Only basic functionality is fine, a SPA with buttons and text boxes that execute API calls is fine.
+  - Containerize the application(s) and add configuration to run it/them in Docker compose
+  - Create an endpoint to export any table from the database in CSV format by passing the table name as a query parameter. 
+
 ## Considerations
 - Feel free to go about this in any way you see fit. You can add any classes or methods you need, and you can modify classes and methods that aren't
 explicitly marked with a comment saying not to modify.
-- Any data returned from the API should be in JSON format. Responses that return no data can return anything, as long as it also returns a 200 on a success
+- Any data returned from the API should be in JSON format unless otherwise specified. Responses that return no data can return anything, as long as it also returns a 200 on a success.
 or a 400/500 on a failure. Bonus points for proper error messaging!
-- Avoid using external libraries that are not already included if possible.
+- For the Java API, avoid using external libraries that are not already included if possible. Some external libraries may be required for the first challenge problem.
 - The database is already populated with some data, but feel free to add more if you need to.
 - Any approach is valid. For example, no points will be taken off for doing business logic via Java if you are not particularly familiar with SQL.
 Clean code and proper documentation are the most important things.
 - Unit tests are not required, but are encouraged.
+- The challenge problems are not required, but completing 2-3 of them will benefit your consideration.
 
 ## Submitting
 1. Create a new repository within GitHub and name it as your favorite animal (ex. Sloth, Zebra)
