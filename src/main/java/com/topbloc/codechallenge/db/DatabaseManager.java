@@ -149,4 +149,295 @@ public class DatabaseManager {
             return null;
         }
     }
+
+    public static JSONArray getOutOfStockItems() {
+        String sql = "SELECT inventory.id, items.name, inventory.stock, inventory.capacity " +
+                    "FROM inventory " +
+                    "JOIN items ON inventory.id = items.id " +
+                    "WHERE inventory.stock = 0";
+        try {
+            ResultSet set = conn.createStatement().executeQuery(sql);
+            return convertResultSetToJson(set);
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public static JSONArray getOverStock() {
+        String sql = "SELECT inventory.id, items.name, inventory.stock, inventory.capacity " +
+                "FROM inventory " +
+                "JOIN items ON inventory.id = items.id " +
+                "WHERE inventory.stock > inventory.capacity";
+        try {
+            ResultSet set = conn.createStatement().executeQuery(sql);
+            return convertResultSetToJson(set);
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public static JSONArray getLowStock() {
+        String sql = "SELECT inventory.id, items.name, inventory.stock, inventory.capacity " +
+                "FROM inventory " +
+                "JOIN items ON inventory.id = items.id " +
+                "WHERE (CAST(inventory.stock AS FLOAT) / inventory.capacity) < .35";
+        try {
+            ResultSet set = conn.createStatement().executeQuery(sql);
+            return convertResultSetToJson(set);
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public static JSONObject getSpecificItem(int itemId) {
+        String sql = "SELECT inventory.id, items.name, inventory.stock, inventory.capacity " +
+                "FROM inventory " +
+                "JOIN items ON inventory.id = items.id " +
+                "WHERE inventory.id = ?";
+        try {
+            PreparedStatement statement = conn.prepareStatement(sql);
+            statement.setInt(1, itemId);
+            ResultSet set = statement.executeQuery();
+
+            if (set.next()) {
+                JSONObject obj = new JSONObject();
+                obj.put("id", set.getInt("id"));
+                obj.put("name", set.getInt("name"));
+                obj.put("stock", set.getInt("stock"));
+                obj.put("capacity", set.getInt("capacity"));
+                return obj;
+            } else {
+                return null;
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public static JSONArray getDistributors() {
+        String sql = "SELECT * FROM distributors";
+        try {
+            ResultSet set = conn.createStatement().executeQuery(sql);
+            return convertResultSetToJson(set);
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public static JSONArray getItemsByDistributor(int distributorId) {
+        String sql = "SELECT items.id, items.name, distributor_prices.cost " +
+                "FROM distributor_prices " +
+                "JOIN items ON distributor_prices.item = items.id " +
+                "WHERE distributor_prices.distributor = ?";
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setInt(1, distributorId);
+            ResultSet rs = statement.executeQuery();
+            JSONArray json = convertResultSetToJson(rs);
+            System.out.println("Found " + json.size() + " items for distributor ID " + distributorId);
+            return json;
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public static JSONArray getDistributorsByItemId(int itemId) {
+        String sql = "SELECT distributors.id, distributors.name, distributor_prices.cost " +
+                "FROM distributor_prices " +
+                "JOIN distributors ON distributor_prices.distributor = distributors.id " +
+                "WHERE distributor_prices.item = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, itemId);
+            ResultSet rs = stmt.executeQuery();
+            JSONArray json = convertResultSetToJson(rs);
+            System.out.println("Found " + json.size() + " distributors for this item ID " + itemId);
+            return json;
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return null;
+        }
+    }
+
+    // POST PUT DELETE
+    public static boolean addItem(String name) {
+        String sql = "INSERT INTO items (name) VALUES (?)";
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, name);
+            statement.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean addToInventory(int itemId, int stock, int capacity) {
+        String sql = "INSERT INTO inventory (item, stock, capacity) VALUES (?, ?, ?)";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, itemId);
+            stmt.setInt(2, stock);
+            stmt.setInt(3, capacity);
+            stmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.out.println("Error adding to inventory: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean updateInventoryItem(int itemId, Integer stock, Integer capacity) {
+        StringBuilder sql = new StringBuilder("UPDATE inventory SET ");
+        boolean setStock = stock != null;
+        boolean setCapacity = capacity != null;
+
+        if (!setStock && !setCapacity) return false;
+
+        if (setStock) sql.append("stock = ?");
+        if (setCapacity) {
+            if (setStock) sql.append(", ");
+            sql.append("capacity = ?");
+        }
+
+        sql.append(" WHERE item = ?");
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            if (setStock) stmt.setInt(idx++, stock);
+            if (setCapacity) stmt.setInt(idx++, capacity);
+            stmt.setInt(idx, itemId);
+
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error updating inventory: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static String addDistributor(String name) {
+        String sql = "INSERT INTO distributors (name) VALUES (?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, name);
+            int rows = stmt.executeUpdate();
+            return rows > 0 ? "Distributor added successfully" : "Failed to add distributor";
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
+        }
+    }
+
+    public static String addItemToDistributorCatalog(int distributorId, int itemId, float cost) {
+        String sql = "INSERT INTO distributor_prices (distributor, item, cost) VALUES (?, ?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, distributorId);
+            stmt.setInt(2, itemId);
+            stmt.setFloat(3, cost);
+
+            int rows = stmt.executeUpdate();
+            return rows > 0 ? "Item added to catalog successfully" : "Failed to add item to catalog";
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
+        }
+    }
+
+    public static String updateDistributorCatalogPrice(int distributorId, int itemId, float newCost) {
+        String sql = "UPDATE distributor_prices SET cost = ? WHERE distributor = ? AND item = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setFloat(1, newCost);
+            stmt.setInt(2, distributorId);
+            stmt.setInt(3, itemId);
+
+            int rows = stmt.executeUpdate();
+            return rows > 0 ? "Price updated successfully" : "Item not found in catalog";
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
+        }
+    }
+
+    public static JSONObject getCheapestRestockOption(int itemId, int quantity) {
+        String sql = "SELECT d.id AS distributor_id, d.name AS distributor_name, dp.cost " +
+                "FROM distributor_prices dp " +
+                "JOIN distributors d ON dp.distributor = d.id " +
+                "WHERE dp.item = ? " +
+                "ORDER BY dp.cost ASC LIMIT 1";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, itemId);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                JSONObject result = new JSONObject();
+                result.put("distributor_id", rs.getInt("distributor_id"));
+                result.put("distributor_name", rs.getString("distributor_name"));
+                float unitCost = rs.getFloat("cost");
+                result.put("unit_cost", unitCost);
+                result.put("quantity", quantity);
+                result.put("total_cost", unitCost * quantity);
+                return result;
+            } else {
+                JSONObject result = new JSONObject();
+                result.put("message", "No distributor found for given item");
+                return result;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
+
+    public static JSONObject deleteItemFromInventory(int itemId) {
+        String sql = "DELETE FROM inventory WHERE item = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, itemId);
+            int rowsAffected = stmt.executeUpdate();
+
+            JSONObject response = new JSONObject();
+            if (rowsAffected > 0) {
+                response.put("message", "Item removed from inventory.");
+                response.put("item_id", itemId);
+            } else {
+                response.put("message", "Item not found in inventory.");
+            }
+            return response;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
+
+    public static JSONObject deleteDistributorById(int distributorId) {
+        String sql = "DELETE FROM distributors WHERE id = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, distributorId);
+            int rowsAffected = stmt.executeUpdate();
+
+            JSONObject response = new JSONObject();
+            if (rowsAffected > 0) {
+                response.put("message", "Distributor deleted.");
+                response.put("distributor_id", distributorId);
+            } else {
+                response.put("message", "Distributor not found.");
+            }
+            return response;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
+
 }
